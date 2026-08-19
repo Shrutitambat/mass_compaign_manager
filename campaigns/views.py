@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.decorators import login_required
-from .models import ContactList, Subscriber
-from .forms import ContactListForm, SubscriberForm
+from .models import ContactList, Subscriber, EmailTemplate, Campaign
+from .forms import ContactListForm, SubscriberForm, EmailTemplateForm, CampaignForm
 
 
 # --- Authentication Views ---
@@ -128,9 +128,114 @@ def subscriber_update(request, pk):
 @login_required
 def subscriber_delete(request, pk):
     subscriber = get_object_or_404(Subscriber, pk=pk, contact_list__user=request.user)
-    list_pk = subscriber.contact_list.pk
+    list_pk = subscriber.contact_list.pk;
     if request.method == 'POST':
         subscriber.delete()
         return redirect('contact_list_detail', pk=list_pk)
     # Located in templates/campaigns/subscriber_confirm_delete.html
     return render(request, 'campaigns/subscriber_confirm_delete.html', {'object': subscriber, 'type': 'Subscriber'})
+
+
+# --- Email Templates (V2) ---
+
+@login_required
+def template_list(request):
+    templates = EmailTemplate.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'campaigns/templates.html', {'templates': templates})
+
+
+@login_required
+def template_create(request):
+    if request.method == 'POST':
+        form = EmailTemplateForm(request.POST)
+        if form.is_valid():
+            template = form.save(commit=False)
+            template.user = request.user
+            template.save()
+            return redirect('template_list')
+    else:
+        form = EmailTemplateForm()
+    return render(request, 'campaigns/template_form.html', {'form': form, 'title': 'Create Template'})
+
+
+@login_required
+def template_update(request, pk):
+    template = get_object_or_404(EmailTemplate, pk=pk, user=request.user)
+    if request.method == 'POST':
+        form = EmailTemplateForm(request.POST, instance=template)
+        if form.is_valid():
+            form.save()
+            return redirect('template_list')
+    else:
+        form = EmailTemplateForm(instance=template)
+    return render(request, 'campaigns/template_form.html', {'form': form, 'title': 'Edit Template'})
+
+
+@login_required
+def template_delete(request, pk):
+    template = get_object_or_404(EmailTemplate, pk=pk, user=request.user)
+    if request.method == 'POST':
+        template.delete()
+        return redirect('template_list')
+    return render(request, 'campaigns/subscriber_confirm_delete.html', {'object': template, 'type': 'Template'})
+
+
+# --- Campaigns (V2) ---
+
+@login_required
+def campaign_list(request):
+    campaigns = Campaign.objects.filter(user=request.user).order_by('-created_at')
+    return render(request, 'campaigns/campaigns.html', {'campaigns': campaigns})
+
+
+@login_required
+def campaign_create(request):
+    if request.method == 'POST':
+        form = CampaignForm(request.POST, user=request.user)
+        if form.is_valid():
+            campaign = form.save(commit=False)
+            campaign.user = request.user
+            campaign.save()
+            return redirect('campaign_list')
+    else:
+        form = CampaignForm(user=request.user)
+    return render(request, 'campaigns/campaign_form.html', {'form': form, 'title': 'Create Campaign'})
+
+
+@login_required
+def campaign_detail(request, pk):
+    campaign = get_object_or_404(Campaign, pk=pk, user=request.user)
+    return render(request, 'campaigns/campaign_detail.html', {'campaign': campaign})
+
+
+@login_required
+def campaign_update(request, pk):
+    campaign = get_object_or_404(Campaign, pk=pk, user=request.user)
+    if request.method == 'POST':
+        form = CampaignForm(request.POST, instance=campaign, user=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect('campaign_detail', pk=campaign.pk)
+    else:
+        form = CampaignForm(instance=campaign, user=request.user)
+    return render(request, 'campaigns/campaign_form.html', {'form': form, 'title': 'Edit Campaign'})
+
+
+@login_required
+def campaign_delete(request, pk):
+    campaign = get_object_or_404(Campaign, pk=pk, user=request.user)
+    if request.method == 'POST':
+        campaign.delete()
+        return redirect('campaign_list')
+    return render(request, 'campaigns/subscriber_confirm_delete.html', {'object': campaign, 'type': 'Campaign'})
+
+
+@login_required
+def campaign_toggle_status(request, pk):
+    campaign = get_object_or_404(Campaign, pk=pk, user=request.user)
+    if campaign.status == 'DRAFT':
+        campaign.status = 'READY'
+    elif campaign.status == 'READY':
+        campaign.status = 'DRAFT'
+    campaign.save()
+    return redirect('campaign_detail', pk=campaign.pk)

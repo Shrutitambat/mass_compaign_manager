@@ -31,8 +31,18 @@
                         </a>
                     </li>
                     <li>
-                        <a href="{% url 'contact_lists' %}" class="{% if 'list' in request.resolver_match.url_name %}active{% endif %}">
+                        <a href="{% url 'contact_lists' %}" class="{% if 'list' in request.resolver_match.url_name and 'template' not in request.resolver_match.url_name and 'campaign' not in request.resolver_match.url_name %}active{% endif %}">
                             <i class="bi bi-people me-2"></i> Contact Lists
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'template_list' %}" class="{% if 'template' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-file-earmark-text me-2"></i> Email Templates
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'campaign_list' %}" class="{% if 'campaign' in request.resolver_match.url_name %}active{% endif %}">
+                            <i class="bi bi-megaphone me-2"></i> Campaigns
                         </a>
                     </li>
                 </ul>

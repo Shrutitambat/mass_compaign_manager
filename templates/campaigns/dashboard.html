@@ -7,35 +7,74 @@
         <h2 class="fw-bold mb-0">Dashboard Overview</h2>
         <p class="text-muted">Welcome back, {{ user.username }}</p>
     </div>
-    <a href="{% url 'contact_lists' %}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> Manage Lists</a>
+    <div class="d-flex gap-2">
+        <a href="{% url 'template_create' %}" class="btn btn-outline-primary"><i class="bi bi-file-earmark-plus me-1"></i> New Template</a>
+        <a href="{% url 'campaign_create' %}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i> New Campaign</a>
+    </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-md-6">
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
         <div class="card card-custom p-4 bg-white">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <span class="text-muted fw-semibold">Total Contact Lists</span>
-                    <h1 class="display-5 fw-bold text-dark mt-2 mb-0">{{ total_lists }}</h1>
-                </div>
-                <div class="bg-primary bg-opacity-10 p-3 rounded-circle">
-                    <i class="bi bi-folder2-open fs-2 text-primary"></i>
-                </div>
-            </div>
+            <span class="text-muted fw-semibold">Contact Lists</span>
+            <h2 class="fw-bold text-dark mt-2 mb-0">{{ total_lists }}</h2>
         </div>
     </div>
-    <div class="col-md-6">
+    <div class="col-md-3">
         <div class="card card-custom p-4 bg-white">
-            <div class="d-flex align-items-center justify-content-between">
-                <div>
-                    <span class="text-muted fw-semibold">Total Subscribers</span>
-                    <h1 class="display-5 fw-bold text-dark mt-2 mb-0">{{ total_subscribers }}</h1>
-                </div>
-                <div class="bg-success bg-opacity-10 p-3 rounded-circle">
-                    <i class="bi bi-people-fill fs-2 text-success"></i>
-                </div>
-            </div>
+            <span class="text-muted fw-semibold">Total Subscribers</span>
+            <h2 class="fw-bold text-dark mt-2 mb-0">{{ total_subscribers }}</h2>
         </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom p-4 bg-white">
+            <span class="text-muted fw-semibold">Email Templates</span>
+            <h2 class="fw-bold text-dark mt-2 mb-0">{{ total_templates }}</h2>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom p-4 bg-white">
+            <span class="text-muted fw-semibold">Total Campaigns</span>
+            <h2 class="fw-bold text-dark mt-2 mb-0">{{ total_campaigns }}</h2>
+        </div>
+    </div>
+</div>
+
+<div class="card card-custom bg-white p-4">
+    <h5 class="fw-bold mb-3">Recent Campaigns</h5>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Campaign Name</th>
+                    <th>Target List</th>
+                    <th>Template</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in recent_campaigns %}
+                <tr>
+                    <td class="fw-semibold">{{ c.name }}</td>
+                    <td>{{ c.contact_list.name }}</td>
+                    <td>{{ c.template.title }}</td>
+                    <td>
+                        <span class="badge {% if c.status == 'READY' %}bg-success{% else %}bg-secondary{% endif %}">
+                            {{ c.get_status_display }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{% url 'campaign_detail' c.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="text-center py-4 text-muted">No campaigns created yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}
