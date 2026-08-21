@@ -42,13 +42,19 @@ class Campaign(models.Model):
     STATUS_CHOICES = [
         ('DRAFT', 'Draft'),
         ('READY', 'Ready'),
+        ('QUEUED', 'Queued'),
+        ('PROCESSING', 'Processing'),
+        ('COMPLETED', 'Completed'),
+        ('FAILED', 'Failed'),
     ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='campaigns')
     name = models.CharField(max_length=200)
     contact_list = models.ForeignKey(ContactList, on_delete=models.CASCADE, related_name='campaigns')
     template = models.ForeignKey(EmailTemplate, on_delete=models.CASCADE, related_name='campaigns')
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='DRAFT')
+    status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='DRAFT')
+    sent_count = models.PositiveIntegerField(default=0)
+    failed_count = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

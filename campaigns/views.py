@@ -4,6 +4,8 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.decorators import login_required
 from .models import ContactList, Subscriber, EmailTemplate, Campaign
 from .forms import ContactListForm, SubscriberForm, EmailTemplateForm, CampaignForm
+from django.contrib import messages
+from .tasks import send_campaign_emails
 
 
 # --- Authentication Views ---
@@ -238,4 +240,31 @@ def campaign_toggle_status(request, pk):
     elif campaign.status == 'READY':
         campaign.status = 'DRAFT'
     campaign.save()
+    return redirect('campaign_detail', pk=campaign.pk)
+
+
+# campaigns/views.py
+
+@login_required
+def campaign_send(request, pk):
+    campaign = get_object_or_404(Campaign, pk=pk, user=request.user)
+
+    if campaign.contact_list.subscribers.count() == 0:
+        messages.error(request, "Cannot send a campaign with zero subscribers.")
+        return redirect('campaign_detail', pk=campaign.pk)
+
+    # 1. Update status to QUEUED
+    campaign.status = 'QUEUED'
+    campaign.save(update_fields=['status'])
+
+    # 2. Hand off to Celery with fallback error handling
+    try:
+        send_campaign_emails.delay(campaign.id)
+        messages.success(request, f"Campaign '{campaign.name}' queued successfully!")
+    except Exception as e:
+        # If Redis or Celery is offline, immediately revert status to FAILED so UI doesn't freeze
+        campaign.status = 'FAILED'
+        campaign.save(update_fields=['status'])
+        messages.error(request, f"Could not connect to Redis/Celery: {str(e)}")
+
     return redirect('campaign_detail', pk=campaign.pk)

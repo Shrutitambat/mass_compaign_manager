@@ -2,37 +2,106 @@
 {% block title %}{{ campaign.name }}{% endblock %}
 
 {% block content %}
+<!-- Flash Messages -->
+{% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+{% endif %}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <a href="{% url 'campaign_list' %}" class="text-decoration-none text-muted small"><i class="bi bi-arrow-left"></i> Back to Campaigns</a>
+        <a href="{% url 'campaign_list' %}" class="text-decoration-none text-muted small">
+            <i class="bi bi-arrow-left"></i> Back to Campaigns
+        </a>
         <h2 class="fw-bold mb-0 mt-1">{{ campaign.name }}</h2>
     </div>
+
     <div class="d-flex gap-2 align-items-center">
-        <form method="post" action="{% url 'campaign_toggle_status' campaign.pk %}">
-            {% csrf_token %}
-            {% if campaign.status == 'DRAFT' %}
-            <button type="submit" class="btn btn-success"><i class="bi bi-check2-circle me-1"></i> Mark as READY</button>
-            {% else %}
-            <button type="submit" class="btn btn-warning text-dark"><i class="bi bi-pencil-square me-1"></i> Revert to DRAFT</button>
-            {% endif %}
-        </form>
-        <a href="{% url 'campaign_update' campaign.pk %}" class="btn btn-outline-secondary"><i class="bi bi-pencil"></i> Edit</a>
+        <!-- 1. Send / Retry / Processing Button -->
+        {% if campaign.status == 'PROCESSING' %}
+            <button class="btn btn-warning" disabled>
+                <span class="spinner-border spinner-border-sm me-1" role="status"></span> Sending...
+            </button>
+        {% else %}
+            <form method="post" action="{% url 'campaign_send' campaign.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary shadow-sm">
+                    <i class="bi bi-send-fill me-1"></i>
+                    {% if campaign.status == 'COMPLETED' %}Resend Campaign
+                    {% elif campaign.status == 'QUEUED' or campaign.status == 'FAILED' %}Retry Sending
+                    {% else %}Send Campaign{% endif %}
+                </button>
+            </form>
+        {% endif %}
+
+        <!-- 2. Status Toggle Button -->
+        {% if campaign.status == 'DRAFT' %}
+            <form method="post" action="{% url 'campaign_toggle_status' campaign.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-success">
+                    <i class="bi bi-check2-circle me-1"></i> Mark as READY
+                </button>
+            </form>
+        {% elif campaign.status == 'READY' %}
+            <form method="post" action="{% url 'campaign_toggle_status' campaign.pk %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-warning">
+                    <i class="bi bi-pencil-square me-1"></i> Revert to DRAFT
+                </button>
+            </form>
+        {% endif %}
+
+        <!-- 3. Edit Button -->
+        {% if campaign.status == 'DRAFT' or campaign.status == 'READY' %}
+            <a href="{% url 'campaign_update' campaign.pk %}" class="btn btn-outline-secondary">
+                <i class="bi bi-pencil"></i> Edit
+            </a>
+        {% endif %}
+    </div>
+</div>
+<!-- Real-time Progress Counters -->
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card card-custom p-3 bg-white">
+            <span class="text-muted small">Status</span>
+            <h4 class="fw-bold mt-1 mb-0">
+                <span class="badge {% if campaign.status == 'COMPLETED' %}bg-success{% elif campaign.status == 'QUEUED' or campaign.status == 'PROCESSING' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                    {{ campaign.get_status_display }}
+                </span>
+            </h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom p-3 bg-white">
+            <span class="text-muted small">Total Recipients</span>
+            <h4 class="fw-bold text-dark mt-1 mb-0">{{ campaign.contact_list.subscribers.count }}</h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom p-3 bg-white">
+            <span class="text-muted small">Sent Successfully</span>
+            <h4 class="fw-bold text-success mt-1 mb-0">{{ campaign.sent_count }}</h4>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card card-custom p-3 bg-white">
+            <span class="text-muted small">Failed</span>
+            <h4 class="fw-bold text-danger mt-1 mb-0">{{ campaign.failed_count }}</h4>
+        </div>
     </div>
 </div>
 
 <div class="row g-4">
     <div class="col-md-6">
         <div class="card card-custom p-4 bg-white h-100">
-            <h5 class="fw-bold mb-3 border-bottom pb-2">Campaign Configuration</h5>
-            <div class="mb-3">
-                <span class="text-muted small d-block">Status</span>
-                <span class="badge {% if campaign.status == 'READY' %}bg-success{% else %}bg-secondary{% endif %} fs-6 mt-1">
-                    {{ campaign.get_status_display }}
-                </span>
-            </div>
+            <h5 class="fw-bold mb-3 border-bottom pb-2">Campaign Details</h5>
             <div class="mb-3">
                 <span class="text-muted small d-block">Target Audience</span>
-                <strong>{{ campaign.contact_list.name }}</strong> ({{ campaign.contact_list.subscribers.count }} total recipients)
+                <strong>{{ campaign.contact_list.name }}</strong>
             </div>
             <div class="mb-3">
                 <span class="text-muted small d-block">Email Template</span>
@@ -53,4 +122,13 @@
         </div>
     </div>
 </div>
+
+{% if campaign.status == 'QUEUED' or campaign.status == 'PROCESSING' %}
+<script>
+    // Auto-refresh every 3 seconds while background task is executing
+    setTimeout(function(){
+        window.location.reload();
+    }, 3000);
+</script>
+{% endif %}
 {% endblock %}

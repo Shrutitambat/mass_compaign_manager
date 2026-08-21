@@ -36,5 +36,8 @@ urlpatterns = [
     path('campaigns/<int:pk>/update/', views.campaign_update, name='campaign_update'),
     path('campaigns/<int:pk>/delete/', views.campaign_delete, name='campaign_delete'),
     path('campaigns/<int:pk>/toggle-status/', views.campaign_toggle_status, name='campaign_toggle_status'),
+
+
+    path('campaigns/<int:pk>/send/', views.campaign_send, name='campaign_send'),
 ]
 
